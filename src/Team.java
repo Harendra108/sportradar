@@ -7,50 +7,25 @@ import java.util.Objects;
 
 public class Team {
     private String teamName;
-    private long teamID;
+    private int teamID;
     private List<String> playingPlayers;
     private List<Participant> backupPlayers;
     private Participant coach;
 
-    public String getTeamName() {
-        return teamName;
+    public Team(String teamName, int teamID) {
+        this.teamName = teamName;
+        this.teamID = teamID;
     }
 
-    public void setTeamName(String teamName) {
-        this.teamName = teamName;
+    public String getTeamName() {
+        return teamName;
     }
 
     public long getTeamID() {
         return teamID;
     }
 
-    public void setTeamID(long teamID) {
-        this.teamID = teamID;
-    }
 
-    public List<String> getPlayingPlayers() {
-        return playingPlayers;
-    }
-
-    public void setPlayingPlayers(List<String> playingPlayers) {
-        this.playingPlayers = playingPlayers;
-    }
-
-    public List<Participant> getBackupPlayers() {
-        return backupPlayers;
-    }
-
-    public void setBackupPlayers(List<Participant> backupPlayers) {
-        this.backupPlayers = backupPlayers;
-    }
-
-    public Participant getCoach() {
-        return coach;
-    }
-
-    public void setCoach(Participant coach) {
-        this.coach = coach;
-    }
 
     @Override
     public boolean equals(Object o) {
