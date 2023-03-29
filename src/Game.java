@@ -13,6 +13,8 @@ public class Game {
     private int homeTeamScore;
     private int awayTeamScore;
     private Team winnerTeam;
+    private int totalScore;
+
 
     public int getGameID() {
         return gameID;
@@ -39,6 +41,7 @@ public class Game {
     public void setScore(int homeTeamScore, int awayTeamScore) {
         this.homeTeamScore = homeTeamScore;
         this.awayTeamScore = awayTeamScore;
+        totalScore = homeTeamScore + awayTeamScore;
     }
 
     public void finishGame() {
@@ -63,4 +66,12 @@ public class Game {
         return Optional.of(winnerTeam);
     }
 
+    public int getTotalScoreForTheGame() {
+        return totalScore;
+    }
+
+    @Override
+    public String toString() {
+        return homeTeam.getTeamName() + "-" + homeTeamScore + "; " + awayTeam.getTeamName() + "-" + awayTeamScore;
+    }
 }

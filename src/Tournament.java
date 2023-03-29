@@ -1,16 +1,18 @@
 package src;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 public class Tournament {
     private long tournamentID;
-    private final List<Game> gamesList = new ArrayList<>(1);
+    private final List<Game> gamesList = new CopyOnWriteArrayList<>();
     private final String tournamentLocation = "Wroclaw";//For this test, I am marking it as default one
     private Team winnerTeam;
     private Team runnerUpTeam;
     private Team thirdPlaceTeam;//above three entries are there in case we want to know who is the winner, runnerUp and the bronze team
-    private final Map<Integer, Map<String, Integer>> gameIdScoreBoardMap = new HashMap<>(1);
+    private final Map<Integer, Map<String, Integer>> gameIdScoreBoardMap = new TreeMap<>();
 
 
     private static volatile boolean isTournamentStarted = false;
@@ -18,13 +20,15 @@ public class Tournament {
     public synchronized void startGame(Team homeTeam, Team awayTeam) {
         //gameID will be the autoIncrement of the current GameID.
 
-        Optional<Game> max = gamesList.stream().max(Comparator.comparing(Game::getGameID));
-        int gameID = max.map(Game::getGameID).orElse(0) + 1;
+        Optional<Game> gameWithLastID = gamesList.stream().max(Comparator.comparing(Game::getGameID));
+        int gameID = gameWithLastID.map(Game::getGameID).orElse(0) + 1;
         Game game = new Game(gameID, homeTeam, awayTeam, GameStatus.STARTED, 0, 0);
         gamesList.add(game);
         if(!isTournamentStarted) {
             isTournamentStarted = true;
-            updateScoreBoard();
+            Thread thread = new Thread(this::updateScoreBoard);
+            thread.start();
+
         }
     }
 
@@ -43,9 +47,7 @@ public class Tournament {
 
     public void updateScoreBoard() {
         while(isTournamentStarted) { // while the tournament is in progress, keep the scoreboard updated.
-            Runnable r = this::updateScoreBoardOfAllGames;
-            Thread t = new Thread(r);
-            t.start();
+            updateScoreBoardOfAllGames();
             if(!isTournamentStarted) {
                 break;
             }
@@ -53,7 +55,10 @@ public class Tournament {
     }
 
     private void updateScoreBoardOfAllGames() {
-        gamesList.forEach(game -> gameIdScoreBoardMap.put(game.getGameID(), game.getScore()));
+        synchronized (gamesList) {
+            gamesList.forEach(game -> gameIdScoreBoardMap.put(game.getGameID(), game.getScore()));
+        }
+
     }
 
     public void finishGame(int gameID) {
@@ -62,7 +67,6 @@ public class Tournament {
             Game game = gameToRemove.get();
             game.setStatus(GameStatus.FINISHED);
             game.finishGame();
-            gamesList.remove(game);
         }
     }
 
@@ -71,17 +75,24 @@ public class Tournament {
           1. Sort the scoreboard based upon total score and then by ID
           2. Arrange the display data and then return
          */
-        return gameIdScoreBoardMap.entrySet().stream()
-                .sorted(Collections.reverseOrder(Comparator.comparing(games -> games.getValue().values().stream().reduce(0, Integer::sum))))
-                .sorted(Collections.reverseOrder(Map.Entry.comparingByKey()))
-                .map(entry -> {
-                    Map<String, Integer> gameScores = entry.getValue(); // entries are like Mexico - 0, Canada - 5
-                    List<String> displayData = new ArrayList<>(2);
-                    for(String key : gameScores.keySet()) {
-                        displayData.add(key + "-" + gameScores.get(key));
-                    }
-                    return String.join(", ", displayData);
-                }).collect(Collectors.toCollection(ArrayList::new));
+        Comparator<Game> comparator = (g1, g2) -> {
+          if(g1.getTotalScoreForTheGame() > g2.getTotalScoreForTheGame()) {
+              return 1;
+          } else if(g1.getTotalScoreForTheGame() < g2.getTotalScoreForTheGame()) {
+              return -1;
+          } else {
+              return Integer.compare(g1.getGameID(), g2.getGameID());
+          }
+        };
+
+        ArrayList<String> scoreSorted = gamesList.stream().sorted(Collections.reverseOrder(comparator))
+                .map(Game::toString)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        return scoreSorted;
+
+
+
     }
 
 }
